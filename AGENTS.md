@@ -40,7 +40,7 @@ DSH Desktop 的 Web Client 插件：划词 → 浮动按钮 → 翻译卡片。�
 - Profile：`desktop`
 - 本包已通过 `plugin_manager install_bundle` 安装并启用；profile 中是符号链接
 - 思考翻译 bundle 已启用（Bing/Google 后端）
-- 静态检查、槽位注册、后端端点已验证；单元测试（63 例）通过；**实际划词和视觉尚未验证**
+- 静态检查、槽位注册、后端端点已验证；单元测试（68 例）通过；**实际划词和视觉尚未验证**
 
 ## 开发与验证
 
