@@ -39,3 +39,4 @@
 
 - 依赖 `@deepseek-ai/dsh-experimental-cot-translation-bundle`（已在 desktop profile 启用）
 - 实际划词与视觉交互待人工验证
+- 已发布到 npm：`@ringo-x/dsh-selection-translate@0.1.0`（MIT，public）。工作副本仍是 `@local/dsh-selection-translate`，两者是同一份代码；发布产物由 `npm run pack:publish` 生成
