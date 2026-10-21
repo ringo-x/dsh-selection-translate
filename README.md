@@ -4,8 +4,8 @@
 
 ## 状态
 
-- 版本：`0.1.0`（MVP）
-- 已发布到 npm：`@ringo-x/dsh-selection-translate@0.1.0`（MIT，public）；GitHub 仓库 topics 含 `dsh-plugin`，供社区市场抓取
+- 版本：`0.1.1`（MVP；`client.js` 与 0.1.0 相同，此版只更新文档）
+- 已发布到 npm：`@ringo-x/dsh-selection-translate@0.1.1`（MIT，public）；GitHub 仓库 topics 含 `dsh-plugin`，供社区市场抓取
 - 已安装到 `desktop` profile，插件在 `shell.overlay` 中处于 active 状态
 - 语法、清单、槽位、后端接口已验证；68 个单元测试通过；实际划词与视觉交互待人工确认（见“验证”）
 
@@ -118,7 +118,7 @@ npm publish .\dist\<name>-<version>.tgz --access public --registry https://regis
 
 本机直连 `registry.npmjs.org` 不通，需要走代理，例如 `--proxy socks5h://127.0.0.1:10808`。发布后市场需重建目录（快照 TTL 6 小时，或在面板点「刷新」）才会收录。
 
-已发布状态（2026-10-21 核查）：`@ringo-x/dsh-selection-translate@0.1.0` 在 npm 上可安装，`evaluateCompatibility` 判定 compatible。但市场目录由 `SEED_QUERIES = ['dsh-plugin', 'deepseek-harness', 'dsh']` 的全文检索候选 + `topic:dsh-plugin` 的 GitHub 仓库组成，**新包要等 npm 检索索引收录后才会出现**；在那之前给仓库打 `dsh-plugin` topic 是唯一的即时入口（GitHub 来源只扫 topic 下最近更新的仓库）。
+已发布状态（2026-10-21 核查）：`@ringo-x/dsh-selection-translate` 在 npm 上可安装，`evaluateCompatibility` 判定 compatible。但市场目录由 `SEED_QUERIES = ['dsh-plugin', 'deepseek-harness', 'dsh']` 的全文检索候选 + `topic:dsh-plugin` 的 GitHub 仓库组成，**新包要等 npm 检索索引收录后才会出现**；在那之前给仓库打 `dsh-plugin` topic 是唯一的即时入口（GitHub 来源只扫 topic 下最近更新的仓库）。
 
 ### 文件
 

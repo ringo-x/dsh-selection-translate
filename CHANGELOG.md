@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.1] - 2026-10-21
 
-本次只改文档与发布元数据，`client.js` 没有变化，因此不升版本、不重新发布；`@ringo-x/dsh-selection-translate@0.1.0` 上架的代码就是这份代码。
+只更新文档与发布元数据：`client.js` 与 `index.js` 逐字节未变，`0.1.0` 安装后的运行时行为完全一致。之所以发版，是因为 npm 页面上的 README 是 `bcfdab5` 时的快照，缺「发布到插件市场」一节，而 README 只在发布时更新。
 
 ### Fixed
 
@@ -10,14 +10,11 @@
 - 测试数从过期的 63 改为 68（`README.md`、`AGENTS.md`）
 - `v0.1.0` tag 改指到与 npm 发布物一致的提交（`3ad46ae`：`client.js` 换回工作副本 id 后逐字节相同，`LICENSE` 哈希也一致）。此前指向首个提交 `5d918b1`，checkout 该 tag 会得到「必定翻译失败」的版本
 - 本文件结构修正：合并两个重复的 `### Added`；把 `ctx.get` 修复归入 `[0.1.0]`，因为 npm 上的 0.1.0 确实包含它
+- 补充「发布后市场何时收录」的说明：市场目录取 `SEED_QUERIES` 的全文检索候选与 `topic:dsh-plugin` 仓库，新包要等 npm 检索索引收录，或靠 GitHub topic 即时进入
 
 ### Changed
 
 - GitHub 仓库补上 topics（`dsh-plugin`、`deepseek-harness`、`dsh`、`cordis`、`translation`、`selection`），社区市场 `dsh-compat-market` 的 GitHub 来源按 `topic:dsh-plugin` 抓取
-
-### Notes
-
-- npm 上的 README 是 `bcfdab5` 时的快照，缺「发布到插件市场」一节。要更新它只能发新版本（如 `0.1.1`），而本机没有 npm 凭据（`npm whoami` → `ENEEDAUTH`）；等有凭据时再决定是否值得为一段文档发版
 
 ## [0.1.0] - 2026-10-21
 
