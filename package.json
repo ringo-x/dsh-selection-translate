@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Select text in the DSH window and translate it with the built-in Bing/Google translation service.",
   "scripts": {
-    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check.ps1"
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check.ps1",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test.ps1"
   },
   "exports": {
     ".": "./index.js",

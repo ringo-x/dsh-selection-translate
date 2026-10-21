@@ -29,6 +29,10 @@ try {
     throw "bundle patch missing: $($package.dsh.bundle.patch)"
   }
 
+  # Unit tests load the real client.js; a failure here blocks the change.
+  & (Join-Path $PSScriptRoot 'test.ps1')
+  if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
+
   Write-Host "checks passed: $($package.name)@$($package.version)"
 } finally {
   Pop-Location

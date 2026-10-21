@@ -6,7 +6,7 @@
 
 - 版本：`0.1.0`（MVP）
 - 已安装到 `desktop` profile，插件在 `shell.overlay` 中处于 active 状态
-- 语法、清单、槽位、后端接口已验证；实际划词与视觉交互待人工确认（见“验证”）
+- 语法、清单、槽位、后端接口已验证；55 个单元测试通过；实际划词与视觉交互待人工确认（见“验证”）
 
 ## 功能
 
@@ -61,12 +61,29 @@
 ## 开发
 
 ```powershell
-# 语法 / JSON / SVG / manifest 检查
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check.ps1
+# 静态检查 + 单元测试（提交前必须全绿）
+npm run check
+
+# 只跑测试
+npm test
+# 等价于：powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 
 # 安装或更新到当前 profile（由 agent 通过 plugin_manager 执行）
 # target: D:\ai\translate-plugin
 ```
+
+### 测试
+
+测试用 Node 内置的 `node:test`，没有 npm 依赖，也不需要安装任何东西。`test/helpers/` 里的 fake DOM、fake React 和挂载器直接加载真实的 `client.js`，所以测的是实际发布的代码：
+
+| 文件 | 覆盖 |
+|---|---|
+| `test/module.test.mjs` | 模块 id、`inject`、`apply` 的副作用、槽位注册、中英文案键、清单一致性 |
+| `test/selection.test.mjs` | 选区校验、按钮出现与关闭时机（点击外部 / Esc / 滚动 / 失焦 / 缩放） |
+| `test/translate.test.mjs` | 请求参数、目标语言、付费与不可用 provider、长度上限、缓存、超时、重试、取消 |
+| `test/render.test.mjs` | 按钮与卡片结构、定位、错误文案、复制（含剪贴板降级）、关闭 |
+
+**规则：任何修改后都必须先让 `npm run check` 通过。** 新增或修改行为、错误分支、文案键时，要同时补 `test/` 用例；不允许为了让测试通过而删除或放宽断言。这条规则对 agent 会话同样有效（见 `AGENTS.md`）。
 
 - 本包通过符号链接安装到 profile，修改工作区文件即可被 DSH 读取；Client 插件通常由 HMR 应用，必要时刷新/重开窗口。
 - 不要手动修改 profile 的 `package.json` / `cordis.patch.yml`；安装、启用、卸载走 `plugin_manager`。
@@ -82,9 +99,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check.ps1
 | `cordis.patch.yml` | 插入插件行 |
 | `locale/*.json` | 插件管理页标题/描述 |
 | `icon.svg` | 插件图标 |
+| `test/` | `node:test` 单元测试与 fake DOM / fake React 辅助 |
 | `AGENTS.md` | 后续 agent 会话的上下文与协作约定 |
 | `CHANGELOG.md` | 版本记录 |
-| `scripts/check.ps1` | 本地静态检查 |
+| `scripts/check.ps1` | 静态检查 + 测试入口 |
 
 ## 验证
 
@@ -92,6 +110,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check.ps1
 
 - `node --check client.js` / `index.js`
 - `package.json`、`locale/*.json`、`icon.svg` 解析
+- `npm run check`：静态检查 + 55 个单元测试（模块/清单、选区、翻译流程、渲染、文案键）
 - `shell.overlay` 中 `selection-translate` 已注册且 active
 - 思考翻译 Client 插件 active，`cotTranslation` Remote 已挂载
 - Bing / Google 端点本机实测 HTTP 200
