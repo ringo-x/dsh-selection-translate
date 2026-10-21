@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- 发布说明修正：`git push` 需要 `-c http.proxy=http://127.0.0.1:10808`，而 `registry.npmjs.org` 读公开元数据可直连，发布用账号 token；此前文档把「npm 也要走代理」写成了通则
+- 补记市场收录机制：目录候选只来自 `SEED_QUERIES` 全文检索与 `topic:dsh-plugin`，新包在检索索引收录前搜不到
+
 ## [0.1.1] - 2026-10-21
 
 只更新文档与发布元数据：`client.js` 与 `index.js` 逐字节未变，`0.1.0` 安装后的运行时行为完全一致。之所以发版，是因为 npm 页面上的 README 是 `bcfdab5` 时的快照，缺「发布到插件市场」一节，而 README 只在发布时更新。

@@ -93,8 +93,11 @@ plugin_manager install_bundle target=D:\ai\translate-plugin
 - 工作副本是 `@local/dsh-selection-translate` + `private: true`，**不要**为了发布去改它：profile 用 `link:` 指向本目录，依赖键就是这个名，且改名须走 `plugin_manager`。
 - 公开发布名写在 `publish.json`，`npm run pack:publish` 复制到 `dist/publish` 并只替换两处标识符（`client.js` 的 `id`、`cordis.patch.yml` 的 `name`），再 `npm pack`。测试断言「换回 id 后与工作副本字节一致」，所以发布物就是被测代码。
 - 发布前必须有 `npm run check` 全绿 + `pack:publish` 的全部检查通过（含市场兼容性门禁：只检查 `@deepseek-ai/dsh*` 前缀的 peer）。
-- 本机直连 `registry.npmjs.org` 不通，需 `--proxy socks5h://127.0.0.1:10808`；npmmirror 可直连。
-- 发布后市场要重建目录才收录（快照 TTL 6h，或面板「刷新」）。不要声称"已上架"直到 `GET https://registry.npmjs.org/<pkg>` 返回 200。
+- 本机 `registry.npmjs.org` 读公开元数据可直连，但 `git push` 需要 `-c http.proxy=http://127.0.0.1:10808`；`npm publish` 用 token（`//registry.npmjs.org/:_authToken`），不要写进仓库。
+- 发布后市场要重建目录才收录（快照 TTL 6h，或面板「刷新」）。不要声称"已上架"直到 `GET https://registry.npmjs.org/<pkg>` 返回 200 且 `dist-tags.latest` 是新版本。
+- 当前已发布：`0.1.1`（文档修正版，代码与 0.1.0 相同）；`v0.1.0` tag 已改指到发布物对应的提交 `3ad46ae`。
+- 市场收录的真相：目录候选来自 `SEED_QUERIES` 全文检索（`dsh-plugin`/`deepseek-harness`/`dsh` 各 4 页 × 250）与 `topic:dsh-plugin`。新包在 npm 检索索引收录前搜不到，此时 GitHub topic 是唯一即时入口；`maintainer:<user>` 能查到但 `keywords:` 查不到就是索引未收录。
+- 仓库 topics 已设为 `dsh-plugin`、`deepseek-harness`、`dsh`、`cordis`、`translation`、`selection`。
 
 ## 协作约定
 

@@ -116,7 +116,7 @@ npm run pack:publish
 npm publish .\dist\<name>-<version>.tgz --access public --registry https://registry.npmjs.org
 ```
 
-本机直连 `registry.npmjs.org` 不通，需要走代理，例如 `--proxy socks5h://127.0.0.1:10808`。发布后市场需重建目录（快照 TTL 6 小时，或在面板点「刷新」）才会收录。
+本机 `git push` 需走代理（`-c http.proxy=http://127.0.0.1:10808`）；`npm publish` 用账号 token（`//registry.npmjs.org/:_authToken`，不要提交）。发布后市场需重建目录（快照 TTL 6 小时，或在面板点「刷新」）才会收录。
 
 已发布状态（2026-10-21 核查）：`@ringo-x/dsh-selection-translate` 在 npm 上可安装，`evaluateCompatibility` 判定 compatible。但市场目录由 `SEED_QUERIES = ['dsh-plugin', 'deepseek-harness', 'dsh']` 的全文检索候选 + `topic:dsh-plugin` 的 GitHub 仓库组成，**新包要等 npm 检索索引收录后才会出现**；在那之前给仓库打 `dsh-plugin` topic 是唯一的即时入口（GitHub 来源只扫 topic 下最近更新的仓库）。
 
