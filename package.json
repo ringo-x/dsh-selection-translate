@@ -1,9 +1,9 @@
 {
   "name": "@local/dsh-selection-translate",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "Select text in the DSH window and translate it with the built-in Bing/Google translation service.",
+  "description": "Inline text translation for DSH via free Bing or Google.",
   "scripts": {
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check.ps1",
     "test": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test.ps1",
