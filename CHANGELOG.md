@@ -14,6 +14,13 @@
 - `test/helpers/`：极简 fake DOM、fake React 与插件挂载器，无第三方依赖
 - `npm test` 脚本与 `scripts/test.ps1`；`scripts/check.ps1` 在静态检查后追加运行测试，失败即退出
 
+### Added
+
+- `publish.json` + `scripts/publish.mjs` + `npm run pack:publish`：构建可发布到 npm 的产物（`dist/publish` → `dist/<name>-<version>.tgz`）。工作副本保持 `@local` + `private` 不动（profile 的 `link:` 依赖依赖它），公开发布名由构建阶段替换 `client.js` 的模块 `id` 与 `cordis.patch.yml` 的行名
+- `LICENSE`（MIT）
+- `test/publish.test.mjs`：断言公开身份可发布、改名是发布物与工作副本的**唯一**差异、发布物仍能被模块加载器挂载、校验器能拒绝标识符漂移（63 → 68 例）
+- 校验器在检测到社区市场 `dsh-compat-market` 时调用其 `evaluateCompatibility`，在发布前给出与安装期一致的兼容性结论
+
 ### Changed
 
 - 开发规则：任何修改后必须让 `npm run check` 全绿；新增或修改行为、错误分支、文案键时同步补测试（记录在 `AGENTS.md` 与 `README.md`）

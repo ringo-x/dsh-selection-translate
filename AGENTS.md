@@ -87,6 +87,15 @@ plugin_manager install_bundle target=D:\ai\translate-plugin
 - `shell.overlay` 可能被更高层模态遮挡；当前 `order: 50`，如遇遮挡再调。
 - 剪贴板 API 在自定义协议下可能不可用，代码已有 `execCommand` 降级。
 
+## 发布（npm）
+
+- **DSH 官方没有插件市场。** 社区市场（`dsh-compat-market`）的目录来自 npm 注册表 + GitHub `dsh-plugin` topic，没有上传接口。上架 = 把包发到 npm（或给仓库打 topic）。
+- 工作副本是 `@local/dsh-selection-translate` + `private: true`，**不要**为了发布去改它：profile 用 `link:` 指向本目录，依赖键就是这个名，且改名须走 `plugin_manager`。
+- 公开发布名写在 `publish.json`，`npm run pack:publish` 复制到 `dist/publish` 并只替换两处标识符（`client.js` 的 `id`、`cordis.patch.yml` 的 `name`），再 `npm pack`。测试断言「换回 id 后与工作副本字节一致」，所以发布物就是被测代码。
+- 发布前必须有 `npm run check` 全绿 + `pack:publish` 的全部检查通过（含市场兼容性门禁：只检查 `@deepseek-ai/dsh*` 前缀的 peer）。
+- 本机直连 `registry.npmjs.org` 不通，需 `--proxy socks5h://127.0.0.1:10808`；npmmirror 可直连。
+- 发布后市场要重建目录才收录（快照 TTL 6h，或面板「刷新」）。不要声称"已上架"直到 `GET https://registry.npmjs.org/<pkg>` 返回 200。
+
 ## 协作约定
 
 - **先确认范围再动手**：0.1.0 是在用户只要求“先探讨”时直接实现的，后续不要重复。

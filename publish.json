@@ -1,0 +1,35 @@
+{
+  "name": "@ringo-x/dsh-selection-translate",
+  "license": "MIT",
+  "author": "ringo-x",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ringo-x/dsh-selection-translate.git"
+  },
+  "homepage": "https://github.com/ringo-x/dsh-selection-translate#readme",
+  "bugs": {
+    "url": "https://github.com/ringo-x/dsh-selection-translate/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "cordis",
+    "translation",
+    "translate",
+    "selection"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.5",
+    "@deepseek-ai/dsh-api-remotes": "^0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-locale": "^0.2.1-rc.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

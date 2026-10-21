@@ -89,6 +89,34 @@ npm test
 - 不要手动修改 profile 的 `package.json` / `cordis.patch.yml`；安装、启用、卸载走 `plugin_manager`。
 - 不要直接修改 `app.asar` 内的 DSH 包；需要参考的实现先复制到工作区。
 
+### 发布到插件市场
+
+DSH 官方**没有**插件市场。社区市场（如 `dsh-compat-market`）的目录只从两处聚合：**npm 注册表**（主来源）与 **GitHub `dsh-plugin` topic**（次来源），没有上传接口——所谓"上架"就是让包出现在这两个源头里。
+
+工作副本叫 `@local/dsh-selection-translate` 且 `private: true`，npm 拒发；而 cordis 按模块 id 解析 bundle 行，公开名必须同时出现在 `package.json.name`、`client.js` 的 `id`、`cordis.patch.yml` 的 `name` 三处。改名会破坏 profile 的 `link:` 依赖（须走 `plugin_manager`），所以采用**构建时改名**：`publish.json` 保存公开身份，脚本把文件复制到 `dist/publish/` 后只替换这两个标识符。
+
+```powershell
+# 构建 + 校验 + 打包（不联网、不需要凭据）
+npm run pack:publish
+# 产出 dist/<name>-<version>.tgz；打印 sha256 与后续发布命令
+```
+
+脚本会依次校验：清单非 private、`publishConfig.access`、`dsh` 两半齐全、`files` 逐项落地、说明所列文件存在、`client.js` 能被 DSH 模块加载器解析、`index.js` 导出 `apply`，并在本机装了社区市场时用它的 `evaluateCompatibility` 跑一遍兼容性门禁。
+
+| 文件 | 作用 |
+|---|---|
+| `publish.json` | 仅发布用的覆盖层：公开包名、license、仓库、keywords、peerDependencies、publishConfig |
+| `scripts/publish.mjs` | 构建 `dist/publish` + 校验 + `npm pack` |
+| `test/publish.test.mjs` | 断言公开身份可发布、改名是唯一差异、发布物能挂载、门禁通过 |
+
+发布（需要 npm 账号，且 scope 必须是你的用户名或所属 org）：
+
+```powershell
+npm publish .\dist\<name>-<version>.tgz --access public --registry https://registry.npmjs.org
+```
+
+本机直连 `registry.npmjs.org` 不通，需要走代理，例如 `--proxy socks5h://127.0.0.1:10808`。发布后市场需重建目录（快照 TTL 6 小时，或在面板点「刷新」）才会收录。
+
 ### 文件
 
 | 文件 | 作用 |
@@ -103,6 +131,7 @@ npm test
 | `AGENTS.md` | 后续 agent 会话的上下文与协作约定 |
 | `CHANGELOG.md` | 版本记录 |
 | `scripts/check.ps1` | 静态检查 + 测试入口 |
+| `publish.json` | 发布覆盖层（公开身份），仅 `npm run pack:publish` 使用 |
 
 ## 验证
 
