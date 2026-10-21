@@ -1,0 +1,3 @@
+- insert:
+    - id: selection-translate
+      name: '@local/dsh-selection-translate'
