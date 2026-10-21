@@ -9,6 +9,7 @@ window.__ModuleLoader__.load({
     const REQUEST_TIMEOUT_MS = 20000;
     const LIMITS_TTL_MS = 60000;
     const CACHE_LIMIT = 40;
+    const FALLBACK_MAX_CHARS = 4000;
 
     const LANG_LABELS = {
       zh: '简体中文',
@@ -39,6 +40,7 @@ window.__ModuleLoader__.load({
       close: 'Close',
       privacy: 'Selected text is sent to the online translation service (Bing/Google).',
       failed: 'Translation failed. Check your network or try again later.',
+      detail: 'Error: {detail}',
       timeout: 'Translation timed out. Try again.',
       tooLong: 'The selection is too long (max {max} characters).',
       serviceUnavailable:
@@ -62,6 +64,7 @@ window.__ModuleLoader__.load({
       close: '关闭',
       privacy: '选中文本会发送给在线翻译服务（Bing/Google），请注意隐私。',
       failed: '翻译失败，请检查网络或稍后重试。',
+      detail: '错误信息：{detail}',
       timeout: '翻译超时，请重试。',
       tooLong: '选中文本过长，最多 {max} 个字符。',
       serviceUnavailable: '翻译服务不可用，请启用「思考翻译」插件（Bing/Google）后重试。',
@@ -87,6 +90,7 @@ window.__ModuleLoader__.load({
 .dst-loading{display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .dst-spinner{flex:0 0 auto;width:14px;height:14px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-brand-primary);border-radius:50%;animation:dst-spin 1s linear infinite}
 .dst-error{color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px}
+.dst-detail{padding:2px 12px 0;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:16px;word-break:break-word;user-select:text}
 .dst-foot{display:flex;align-items:center;gap:6px;padding:8px 12px 0}
 .dst-action{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}
 .dst-action:hover{border-color:var(--dsw-alias-border-l2)}
@@ -117,8 +121,33 @@ window.__ModuleLoader__.load({
       return LANG_LABELS[value] || LANG_LABELS[value.split('-')[0]] || value;
     }
 
-    function errorState(key, params, retryable) {
-      return { key, params, retryable: retryable !== false };
+    function errorState(key, params, retryable, detail) {
+      return { key, params, retryable: retryable !== false, detail: detail || '' };
+    }
+
+    function describeError(value) {
+      if (!value) return '';
+      const code = typeof value.code === 'string' ? value.code : '';
+      const message = value.message ? String(value.message) : typeof value === 'string' ? value : '';
+      return (code ? code + (message ? ' — ' + message : '') : message).trim().slice(0, 240);
+    }
+
+    /**
+     * Turn any thrown value into an error state, keeping the Remote/gateway code
+     * and message visible so a failed call can be reported instead of only
+     * showing the generic network hint.
+     */
+    function failureState(error) {
+      if (error && error.key) {
+        const detail = error.detail || (error.cause ? describeError(error.cause) : '');
+        return errorState(error.key, error.params, error.retryable, detail);
+      }
+      return errorState('failed', undefined, true, describeError(error));
+    }
+
+    function textLimitOf(value) {
+      const limit = Number(value && value.maxTextChars);
+      return Number.isFinite(limit) && limit >= 2 ? limit : FALLBACK_MAX_CHARS;
     }
 
     function createController(ctx) {
@@ -193,10 +222,58 @@ window.__ModuleLoader__.load({
         limitsCache = null;
       }
 
+      function remoteFace() {
+        // `remote.cotTranslation` is a nested service: Cordis only resolves it
+        // through injection or the optional `ctx.get` lookup. Reading it as a
+        // plain property throws "cannot get property ... without inject", so the
+        // optional lookup has to come first.
+        if (typeof ctx.get === 'function') {
+          try {
+            const face = ctx.get('remote.cotTranslation');
+            if (face) return face;
+          } catch {
+            /* fall through to the property lookup */
+          }
+        }
+        try {
+          return (ctx.remote && ctx.remote.cotTranslation) || null;
+        } catch {
+          return null;
+        }
+      }
+
+      function localeLanguage() {
+        const snapshot = ctx.locale.getSnapshot();
+        return (snapshot && snapshot.active) || 'en';
+      }
+
+      function languageOf(preferences) {
+        if (!preferences) return undefined;
+        return preferences.targetLanguage === 'auto' ? localeLanguage() : preferences.targetLanguage;
+      }
+
+      /**
+       * Read provider, language and request limit out of one `limits()` snapshot.
+       * `auto` stays unresolved so a language switch applies to the cached
+       * snapshot; a missing or malformed snapshot returns `null`.
+       */
+      function preferencesFrom(value) {
+        const preferences = value && value.preferences;
+        if (!preferences || typeof preferences !== 'object') return null;
+        const provider = typeof preferences.provider === 'string' ? preferences.provider : undefined;
+        const targetLanguage =
+          typeof preferences.targetLanguage === 'string' ? preferences.targetLanguage : 'auto';
+        return {
+          provider,
+          targetLanguage,
+          maxTextChars: textLimitOf(value),
+          availableProviders: Array.isArray(value.availableProviders) ? value.availableProviders : undefined,
+        };
+      }
+
       async function readLimits(signal) {
         if (limitsCache && Date.now() - limitsCache.at < LIMITS_TTL_MS) return limitsCache.value;
-        const remote = ctx.remote;
-        const face = remote && remote.cotTranslation;
+        const face = remoteFace();
         if (!face || typeof face.limits !== 'function') {
           const error = new Error('translation service unavailable');
           error.key = 'serviceUnavailable';
@@ -204,13 +281,16 @@ window.__ModuleLoader__.load({
         }
         const result = await face.limits(signal);
         if (signal.aborted) throw signal.reason;
-        if (!result || !result.ok) {
+        const value = result && result.ok ? preferencesFrom(result.value) : null;
+        if (!value) {
+          // The call answered but the snapshot is unusable: translate anyway with
+          // the configured provider omitted and the UI language as target.
           const error = new Error('translation limits unavailable');
-          error.key = 'serviceUnavailable';
+          error.code = 'limitsUnavailable';
           throw error;
         }
-        limitsCache = { value: result.value, at: Date.now() };
-        return result.value;
+        limitsCache = { value, at: Date.now() };
+        return value;
       }
 
       async function translate() {
@@ -228,16 +308,27 @@ window.__ModuleLoader__.load({
         }, REQUEST_TIMEOUT_MS);
         emit({ mode: 'loading', text, anchor });
 
+        let preferences = null;
         try {
-          const limits = await readLimits(local.controller.signal);
+          try {
+            preferences = await readLimits(local.controller.signal);
+          } catch (limitsError) {
+            if (active !== local) return;
+            if (local.controller.signal.aborted) throw limitsError;
+            if (limitsError && limitsError.key === 'serviceUnavailable') throw limitsError;
+            // Preferences are only metadata: keep translating through the
+            // provider the service chose itself instead of failing the card.
+            preferences = {
+              provider: undefined,
+              targetLanguage: 'auto',
+              maxTextChars: FALLBACK_MAX_CHARS,
+            };
+          }
           if (active !== local) return;
 
-          const provider = limits.preferences && limits.preferences.provider;
-          const targetLanguage =
-            limits.preferences && limits.preferences.targetLanguage === 'auto'
-              ? ctx.locale.getSnapshot().active
-              : limits.preferences && limits.preferences.targetLanguage;
-          const maxTextChars = Number(limits.maxTextChars) || 4000;
+          const provider = preferences.provider;
+          const targetLanguage = languageOf(preferences);
+          const maxTextChars = preferences.maxTextChars;
 
           if (provider === 'deepseek-account' || provider === 'deepseek-official') {
             emit({
@@ -251,9 +342,9 @@ window.__ModuleLoader__.load({
             return;
           }
           if (
-            Array.isArray(limits.availableProviders) &&
+            Array.isArray(preferences.availableProviders) &&
             provider &&
-            !limits.availableProviders.includes(provider)
+            !preferences.availableProviders.includes(provider)
           ) {
             emit({
               mode: 'error',
@@ -291,13 +382,15 @@ window.__ModuleLoader__.load({
           }
 
           emit({ mode: 'loading', text, anchor, provider, targetLanguage });
-          const face = ctx.remote && ctx.remote.cotTranslation;
+          const face = remoteFace();
           if (!face || typeof face.translate !== 'function') {
             const error = new Error('translation service unavailable');
             error.key = 'serviceUnavailable';
             throw error;
           }
-          const result = await face.translate({ text, targetLanguage, provider }, local.controller.signal);
+          const request = { text, targetLanguage };
+          if (provider) request.provider = provider;
+          const result = await face.translate(request, local.controller.signal);
           if (active !== local) return;
           if (!result || !result.ok) {
             const error = new Error('translation failed');
@@ -320,22 +413,24 @@ window.__ModuleLoader__.load({
               mode: 'error',
               text,
               anchor,
-              provider: state.provider,
-              targetLanguage: state.targetLanguage,
+              provider: preferences && preferences.provider,
+              targetLanguage: languageOf(preferences),
               error: errorState('timeout', undefined, true),
             });
             return;
           }
           if (local.controller.signal.aborted) return;
-          const key = error && error.key ? error.key : 'failed';
-          if (key === 'failed') console.warn('[dsh-selection-translate]', error && error.cause ? error.cause : error);
+          const failure = failureState(error);
+          if (failure.key === 'failed' || failure.detail) {
+            console.warn('[dsh-selection-translate]', error && error.cause ? error.cause : error);
+          }
           emit({
             mode: 'error',
             text,
             anchor,
-            provider: state.provider,
-            targetLanguage: state.targetLanguage,
-            error: errorState(key, undefined, true),
+            provider: preferences && preferences.provider,
+            targetLanguage: languageOf(preferences),
+            error: failure,
           });
         } finally {
           window.clearTimeout(local.timer);
@@ -538,9 +633,10 @@ window.__ModuleLoader__.load({
         ? { left: left + 'px', top: anchor.bottom + 8 + 'px' }
         : { left: left + 'px', bottom: viewportHeight - anchor.top + 8 + 'px' };
 
+      const language = languageLabel(state.targetLanguage);
       const meta = state.provider
-        ? providerLabel(state.provider, t) + ' · ' + languageLabel(state.targetLanguage)
-        : '';
+        ? providerLabel(state.provider, t) + ' · ' + language
+        : language;
       const preview = state.text.length > 280 ? state.text.slice(0, 280) + '…' : state.text;
       const errorText = state.error
         ? state.error.params
@@ -607,6 +703,9 @@ window.__ModuleLoader__.load({
         ),
         h('div', { className: 'dst-source', title: preview }, preview),
         body,
+        state.mode === 'error' && state.error && state.error.detail
+          ? h('div', { className: 'dst-detail' }, t('detail', { detail: state.error.detail }))
+          : null,
         state.mode === 'result' || (state.mode === 'error' && state.error && state.error.retryable)
           ? h(
               'div',

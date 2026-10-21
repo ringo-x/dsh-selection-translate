@@ -29,7 +29,7 @@ DSH Desktop 的 Web Client 插件：划词 → 浮动按钮 → 翻译卡片。�
 ## 运行机制
 
 - `shell.overlay` 是全窗口、点击穿透的浮层；按钮/卡片需 `pointer-events: auto`。
-- 翻译：`ctx.remote.cotTranslation.limits()` + `.translate({ text, targetLanguage, provider }, signal)`，返回 `RemoteResult`（`{ ok, value }` / `{ ok, error }`）。
+- 翻译：`const face = ctx.get('remote.cotTranslation')`，然后 `face.limits(signal)` + `face.translate({ text, targetLanguage, provider }, signal)`，返回 `RemoteResult`（`{ ok, value }` / `{ ok, error }`）。不要写成 `ctx.remote.cotTranslation`（见「已知坑」）。
 - `targetLanguage` 为 `auto` 时用 `ctx.locale.getSnapshot().active`；provider 必须等于 `limits().preferences.provider`。
 - 付费 provider（`deepseek-*`）没有当前 Session，当前版本直接提示切换；不要尝试伪造 sessionId。
 - 依赖 `@deepseek-ai/dsh-experimental-cot-translation-bundle` 启用；它负责 Host `translator` 与 Client Remote 的挂载。
@@ -40,7 +40,7 @@ DSH Desktop 的 Web Client 插件：划词 → 浮动按钮 → 翻译卡片。�
 - Profile：`desktop`
 - 本包已通过 `plugin_manager install_bundle` 安装并启用；profile 中是符号链接
 - 思考翻译 bundle 已启用（Bing/Google 后端）
-- 静态检查、槽位注册、后端端点已验证；单元测试（55 例）通过；**实际划词和视觉尚未验证**
+- 静态检查、槽位注册、后端端点已验证；单元测试（63 例）通过；**实际划词和视觉尚未验证**
 
 ## 开发与验证
 
@@ -81,6 +81,7 @@ plugin_manager install_bundle target=D:\ai\translate-plugin
 ## 已知坑
 
 - 桌面页面 origin 是 `dsh-app://app/`，通过 IPC 走 Remote；不要假设能直接 fetch `http://127.0.0.1:6477`。
+- **`remote.cotTranslation` 是嵌套服务**：直接读 `ctx.remote.cotTranslation` 会被 Cordis 拒绝（`cannot get property "remote.cotTranslation" without inject`），必须用可选的 `ctx.get('remote.cotTranslation')`（或先 `ctx.inject(['remote.cotTranslation'])`）。这个异常发生在 `limits()` 之前，表现为「翻译失败，请检查网络」且卡片没有 provider 元信息——0.1.0 的真实故障原因，2026-10-21 已修。
 - 翻译服务稳定依赖思考翻译 bundle；禁用后弹窗会提示 `serviceUnavailable`。
 - 免费接口可能限流/不可达；Bing 默认更稳，Google 在部分地区不可用。
 - `shell.overlay` 可能被更高层模态遮挡；当前 `order: 50`，如遇遮挡再调。

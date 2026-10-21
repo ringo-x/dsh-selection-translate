@@ -6,7 +6,7 @@
 
 - 版本：`0.1.0`（MVP）
 - 已安装到 `desktop` profile，插件在 `shell.overlay` 中处于 active 状态
-- 语法、清单、槽位、后端接口已验证；55 个单元测试通过；实际划词与视觉交互待人工确认（见“验证”）
+- 语法、清单、槽位、后端接口已验证；63 个单元测试通过；实际划词与视觉交互待人工确认（见“验证”）
 
 ## 功能
 
@@ -110,10 +110,11 @@ npm test
 
 - `node --check client.js` / `index.js`
 - `package.json`、`locale/*.json`、`icon.svg` 解析
-- `npm run check`：静态检查 + 55 个单元测试（模块/清单、选区、翻译流程、渲染、文案键）
+- `npm run check`：静态检查 + 63 个单元测试（模块/清单、选区、翻译流程、渲染、文案键）
 - `shell.overlay` 中 `selection-translate` 已注册且 active
 - 思考翻译 Client 插件 active，`cotTranslation` Remote 已挂载
 - Bing / Google 端点本机实测 HTTP 200
+- 修复：`remote.cotTranslation` 嵌套服务需通过 `ctx.get` 读取（见 CHANGELOG），已补回归用例
 
 待人工确认：
 

@@ -138,7 +138,7 @@ export function createLocale({ active = 'zh' } = {}) {
   };
 }
 
-export function createRemote({ limits, translate, settingsEvent = true } = {}) {
+export function createRemote({ limits, translate, settingsEvent = true, nestedAccess = 'allow' } = {}) {
   const calls = { limits: [], translate: [], settings: 0 };
   const settingsHandlers = new Set();
 
@@ -157,6 +157,17 @@ export function createRemote({ limits, translate, settingsEvent = true } = {}) {
 
   const remote = { cotTranslation };
 
+  if (nestedAccess === 'throw') {
+    // Cordis refuses a nested service read that was not injected: the property
+    // access throws, while `ctx.get('remote.cotTranslation')` still resolves it.
+    Object.defineProperty(remote, 'cotTranslation', {
+      configurable: true,
+      get() {
+        throw new Error('cannot get property "remote.cotTranslation" without inject');
+      },
+    });
+  }
+
   if (settingsEvent) {
     remote.$on = (event, handler) => {
       if (event !== 'settings/document-updated') return () => {};
@@ -170,10 +181,10 @@ export function createRemote({ limits, translate, settingsEvent = true } = {}) {
     for (const handler of settingsHandlers) handler();
   };
 
-  return { remote, calls };
+  return { remote, calls, face: cotTranslation };
 }
 
-export function createCtx({ locale, remote, connectionEvent = true }) {
+export function createCtx({ locale, remote, face, connectionEvent = true }) {
   const effects = [];
   const registrations = [];
   const handlers = new Map();
@@ -182,6 +193,10 @@ export function createCtx({ locale, remote, connectionEvent = true }) {
   const ctx = {
     locale,
     remote,
+    get(name) {
+      if (name === 'remote.cotTranslation') return face ?? (remote && remote.cotTranslation);
+      return ctx[name];
+    },
     effect(fn, label) {
       const cleanup = fn();
       effects.push({ label, cleanup });
@@ -254,8 +269,8 @@ export function mountPlugin({
   const locale = createLocale({ active: activeLocale });
   const created = service
     ? createRemote(remoteOptions)
-    : { remote: {}, calls: { limits: [], translate: [], settings: 0, emitSettings() {} } };
-  const ctx = createCtx({ locale, remote: created.remote, connectionEvent });
+    : { remote: {}, calls: { limits: [], translate: [], settings: 0, emitSettings() {} }, face: null };
+  const ctx = createCtx({ locale, remote: created.remote, face: created.face, connectionEvent });
 
   loaded.module.apply(ctx);
 

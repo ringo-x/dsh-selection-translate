@@ -189,11 +189,114 @@ test('reports serviceUnavailable when the remote face is missing', async (t) => 
   assert.equal(state.error.retryable, true);
 });
 
-test('reports serviceUnavailable when limits fail', async (t) => {
+test('resolves the nested remote face through ctx.get', async (t) => {
+  // Regression: `ctx.remote.cotTranslation` throws in Cordis unless the nested
+  // service is injected, so the plugin must use the optional ctx.get lookup.
+  const instance = mount(t, { remote: { nestedAccess: 'throw' } });
+  const state = await translateText(instance, { text: 'Hello world' });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.translation, '译文');
+  assert.equal(state.provider, 'bing');
+  assert.equal(instance.calls.translate.length, 1);
+});
+
+test('falls back to the property read when ctx.get is unavailable', async (t) => {
+  const instance = mount(t);
+  delete instance.ctx.get;
+
+  const state = await translateText(instance, { text: 'Hello world' });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.translation, '译文');
+});
+
+test('translates without preferences when limits report a failure', async (t) => {
   const instance = mount(t, { remote: { limits: () => ({ ok: false, error: { message: 'offline' } }) } });
+  const state = await translateText(instance, { text: 'Hello world' });
+
+  assert.equal(state.mode, 'result');
+  assert.equal(state.translation, '译文');
+  assert.deepEqual(
+    instance.calls.translate[0].request,
+    { text: 'Hello world', targetLanguage: 'zh' },
+    'provider is omitted so the service falls back to its configured one',
+  );
+  assert.equal(state.provider, undefined);
+});
+
+test('translates without preferences when limits reject', async (t) => {
+  silenceWarnings(t);
+  const instance = mount(t, {
+    remote: {
+      limits: () => {
+        throw new TypeError('cannot read properties of undefined');
+      },
+    },
+  });
+  const state = await translateText(instance, { text: 'Hello world' });
+
+  assert.equal(state.mode, 'result');
+  assert.deepEqual(instance.calls.translate[0].request, {
+    text: 'Hello world',
+    targetLanguage: 'zh',
+  });
+});
+
+test('translates without preferences when the snapshot is malformed', async (t) => {
+  silenceWarnings(t);
+  const instance = mount(t, { remote: { limits: () => ({ ok: true, value: {} }) } });
+  const state = await translateText(instance, { text: 'Hello world' });
+
+  assert.equal(state.mode, 'result');
+  assert.deepEqual(instance.calls.translate[0].request, {
+    text: 'Hello world',
+    targetLanguage: 'zh',
+  });
+});
+
+test('does not cache a limits snapshot that failed to load', async (t) => {
+  silenceWarnings(t);
+  const instance = mount(t, { remote: { limits: () => ({ ok: false, error: { message: 'offline' } }) } });
+
+  await translateText(instance, { text: 'first' });
+  instance.controller.dismiss();
+  await translateText(instance, { text: 'second' });
+
+  assert.equal(instance.calls.limits.length, 2, 'a degraded read is retried instead of cached');
+  assert.equal(instance.calls.translate.length, 2);
+});
+
+test('keeps provider and language when only the translation fails', async (t) => {
+  silenceWarnings(t);
+  const instance = mount(t, {
+    remote: {
+      translate: () => ({ ok: false, error: { code: 'cotTranslation/failed', message: 'Translation failed' } }),
+    },
+  });
   const state = await translateText(instance);
 
-  assert.equal(state.error.key, 'serviceUnavailable');
+  assert.equal(state.error.key, 'failed');
+  assert.equal(state.provider, 'bing');
+  assert.equal(state.targetLanguage, 'zh');
+  assert.equal(state.error.detail, 'cotTranslation/failed — Translation failed');
+});
+
+test('reports an unexpected exception in the error detail', async (t) => {
+  const warnings = captureWarnings(t);
+  const instance = mount(t, {
+    remote: {
+      translate: () => {
+        throw new TypeError('boom');
+      },
+    },
+  });
+  const state = await translateText(instance);
+
+  assert.equal(state.error.key, 'failed');
+  assert.equal(state.error.detail, 'boom');
+  const ours = warnings.filter((args) => String(args[0]).includes('[dsh-selection-translate]'));
+  assert.equal(ours.length, 1);
 });
 
 test('reports serviceUnavailable when translate is not exposed', async (t) => {

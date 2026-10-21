@@ -160,6 +160,30 @@ test('renders a retryable error with a working retry action', async (t) => {
   assert.equal(bodyText(tree), '重试译文');
 });
 
+test('renders the remote failure detail outside the message body', async (t) => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  t.after(() => {
+    console.warn = originalWarn;
+  });
+
+  const instance = mount(t, {
+    remote: {
+      translate: () => ({ ok: false, error: { code: 'cotTranslation/failed', message: 'Translation failed' } }),
+    },
+  });
+  instance.select({ text: 'Check symlink target' });
+  await instance.controller.translate();
+
+  const tree = instance.render().tree;
+  assert.equal(bodyText(tree), '翻译失败，请检查网络或稍后重试。');
+  assert.equal(
+    textOf(find(tree, (node) => className(node) === 'dst-detail')),
+    '错误信息：cotTranslation/failed — Translation failed',
+  );
+  assert.equal(textOf(find(tree, (node) => className(node) === 'dst-meta')), 'Bing · 简体中文');
+});
+
 test('renders the paid provider hint without a retry action', async (t) => {
   const instance = mount(t, {
     remote: {

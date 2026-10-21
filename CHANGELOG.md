@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 划词翻译必定失败并显示「翻译失败，请检查网络或稍后重试」：`remote.cotTranslation` 是嵌套服务，未注入时按属性读取会被 Cordis 拒绝（`cannot get property "remote.cotTranslation" without inject`），异常发生在读取翻译偏好阶段。现在改用可选的 `ctx.get('remote.cotTranslation')` 解析（回退到属性读取），并补了对应回归用例
+- `limits()` 失败/返回异常快照时不再直接放弃翻译：省略 provider、沿用界面语言继续请求，只有翻译本身失败才报错
+- 翻译失败时保留 provider / 目标语言元信息，并在卡片下方显示底层错误码与信息，便于定位（不再只有一句网络提示）
+
 ### Added
 
-- `test/` 测试套件：用 Node 内置 `node:test` 直接加载真实的 `client.js`，覆盖模块与清单契约、选区校验、关闭时机、翻译流程、错误分支、缓存、超时、渲染与复制降级（55 例）
+- `test/` 测试套件：用 Node 内置 `node:test` 直接加载真实的 `client.js`，覆盖模块与清单契约、选区校验、关闭时机、翻译流程、错误分支、缓存、超时、渲染与复制降级（63 例）
 - `test/helpers/`：极简 fake DOM、fake React 与插件挂载器，无第三方依赖
 - `npm test` 脚本与 `scripts/test.ps1`；`scripts/check.ps1` 在静态检查后追加运行测试，失败即退出
 
